@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>冷凍空調系統工況診斷與莫里爾線圖分析儀</title>
+<style>
+:root{--bg:#0f172a;--panel:#1e293b;--panel2:#0b1222;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--cyan:#38bdf8;--green:#10b981;--orange:#f59e0b;--red:#f87171;--blue:#3b82f6}
+*{box-sizing:border-box}body{margin:0;background:#0b1020;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;line-height:1.55}
+main{max-width:1050px;margin:auto;padding:18px}.hero,.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:24px;margin-bottom:20px;box-shadow:0 8px 26px #0002}
+.hero{background:linear-gradient(135deg,#1e293b,#111a2e);padding:28px}.hero h1{font-size:clamp(25px,4vw,38px);line-height:1.4;color:var(--cyan);margin:0 0 8px}.lead{color:var(--muted);font-size:17px;margin:0 0 22px}
+h2{font-size:24px;margin:0 0 4px}h3{font-size:18px;color:var(--cyan);background:#20364b;border-left:5px solid var(--cyan);padding:9px 13px;border-radius:8px;margin:22px 0 14px}
+button,select,input{font:inherit}button{cursor:pointer;border:1px solid #475569;background:#334155;color:#e2e8f0;padding:10px 15px;border-radius:11px;transition:.15s}button:hover{filter:brightness(1.15)}button.active{border-color:var(--cyan);background:#164e63;color:#e0f2fe}.presets{display:flex;gap:9px;flex-wrap:wrap}
+label{display:block;color:#cbd5e1;font-size:15px;margin-bottom:6px}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field input,.field select{width:100%;background:#0b1222;border:1px solid #475569;color:#f8fafc;border-radius:11px;padding:13px 14px;outline:none}.field input:focus,.field select:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #38bdf833}.unit{color:var(--cyan);float:right}.info{background:#1d3a50;border:1px solid #256887;border-radius:12px;padding:12px 15px;color:#bae6fd;margin:14px 0}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{background:#0b1222;border:1px solid var(--line);border-radius:15px;padding:15px 17px;min-height:118px}.metric .name{color:var(--muted);font-size:15px}.metric .value{font-size:clamp(22px,3vw,31px);font-weight:700;margin:5px 0;color:#f8fafc;overflow-wrap:anywhere}.metric .hint{color:#64748b;font-size:13px}.good{color:var(--green)!important}.warn{color:var(--orange)!important}.bad{color:var(--red)!important}
+.status{padding:16px 18px;border:1px solid var(--green);background:#123c3c;color:#34d399;border-radius:15px;font-size:21px;font-weight:700;margin:16px 0}.diagnosis{border-left:6px solid var(--green);background:#0b1222;border-radius:12px;padding:17px}.diagnosis p{margin:7px 0;color:#cbd5e1}.chartwrap{background:#0b1222;border-radius:14px;padding:10px;overflow:hidden}.chartwrap svg{display:block;width:100%;height:auto}.legend{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;color:var(--muted);padding:12px 0 0}.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px}
+.small{font-size:13px;color:var(--muted)}.footer{color:#64748b;font-size:12px;text-align:center;padding:8px 15px 28px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}.note{font-size:13px;color:#94a3b8}
+@media(min-width:760px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){main{padding:10px}.hero,.card{padding:17px;border-radius:17px}.field-grid,.metrics,.two-col{grid-template-columns:1fr}.presets button{flex:1 1 45%;font-size:14px}.metric{min-height:unset}}
+</style>
+</head>
+<body>
+<main>
+<section class="hero">
+<h1>冷凍空調系統工況診斷與莫里爾線圖分析儀</h1>
+<p class="lead">整合「冷媒側五大溫度」與「冷凝器／蒸發器進出口風溫度」，即時繪製四大元件圖與 P–h 線圖。</p>
+<div class="presets">
+<button data-preset="normal" class="active">標準正常工況</button>
+<button data-preset="low">模擬：冷媒不足</button>
+<button data-preset="over">模擬：冷媒過多</button>
+<button data-preset="condenser">模擬：冷凝器風量不足／髒堵</button>
+<button data-preset="valve">模擬：膨脹閥開／乾燥器微堵</button>
+<button data-preset="evap">模擬：蒸發器濾網髒堵／結霜</button>
+</div>
+</section>
+<section class="card">
+<h2>運轉參數設定</h2><p class="small">支援 20 種冷媒選擇；壓力與熱力學指標為工程估算，請勿取代原廠物性表。</p>
+<div class="field" style="margin-top:16px"><label for="ref">選擇冷媒種類 (Refrigerant)</label><select id="ref">
+<option>R-410A (HFC 變頻空調主力)</option><option>R-134a</option><option>R-22</option><option>R-32</option><option>R-407C</option><option>R-404A</option><option>R-507A</option><option>R-290 (丙烷)</option><option>R-600a (異丁烷)</option><option>R-1234yf</option><option>R-1234ze(E)</option><option>R-717 (氨)</option><option>R-744 (二氧化碳)</option><option>R-12</option><option>R-23</option><option>R-152a</option><option>R-407A</option><option>R-407F</option><option>R-448A</option><option>R-449A</option>
+</select></div>
+<div class="info" id="refInfo">應用領域：家用／商用空調　|　臨界溫度：約 71.3 °C　|　臨界壓力：約 4.90 MPa</div>
+<h3>1. 冷媒側溫度參數 (Refrigerant Side)</h3>
+<div class="field-grid">
+<div class="field"><label>蒸發溫度 T_evap <span class="unit">°C</span></label><input id="tev" type="number" value="5" step="0.5"></div>
+<div class="field"><label>壓縮機吸氣 T_suc <span class="unit">°C</span></label><input id="tsuc" type="number" value="11" step="0.5"></div>
+<div class="field"><label>冷凝溫度 T_cond <span class="unit">°C</span></label><input id="tcond" type="number" value="45" step="0.5"></div>
+<div class="field"><label>膨脹閥入口 T_liq <span class="unit">°C</span></label><input id="tliq" type="number" value="40" step="0.5"></div>
+<div class="field" style="grid-column:1/-1"><label>壓縮機排氣溫度 T_dis <span class="unit">°C（高壓吐出管）</span></label><input id="tdis" type="number" value="78" step="0.5"></div>
+</div>
+<h3>2. 風側／二次流體側進出口溫度 (Air / Fluid Side)</h3>
+<div class="field-grid">
+<div class="field"><label>冷凝器進風 T_c,in <span class="unit">°C（環境／進水）</span></label><input id="tcin" type="number" value="33" step="0.5"></div>
+<div class="field"><label>冷凝器出風 T_c,out <span class="unit">°C（排風／出水）</span></label><input id="tcout" type="number" value="41" step="0.5"></div>
+<div class="field"><label>蒸發器進風 T_e,in <span class="unit">°C（室內回風）</span></label><input id="tein" type="number" value="26" step="0.5"></div>
+<div class="field"><label>蒸發器出風 T_e,out <span class="unit">°C（送風口）</span></label><input id="teout" type="number" value="15" step="0.5"></div>
+</div>
+<div class="presets" style="margin-top:18px"><button id="calculate" class="active">重新計算／診斷</button><button id="reset">重設標準值</button></div>
+</section>
+<section class="card">
+<h2>熱力學計算指標與系統故障診斷</h2><p class="small" id="copline">理論 COP：—</p>
+<div class="metrics">
+<div class="metric"><div class="name">低壓飽和壓力（蒸發）</div><div class="value" id="plow">—</div><div class="hint" id="plow2">估算值</div></div>
+<div class="metric"><div class="name">高壓飽和壓力（冷凝）</div><div class="value" id="phigh">—</div><div class="hint" id="phigh2">估算值</div></div>
+<div class="metric"><div class="name">吸氣過熱度 (SH)</div><div class="value" id="sh">—</div><div class="hint">常見參考：4–10 °C</div></div>
+<div class="metric"><div class="name">液管過冷度 (SC)</div><div class="value" id="sc">—</div><div class="hint">常見參考：3–8 °C</div></div>
+<div class="metric"><div class="name">冷凝器進出口溫差 ΔTc</div><div class="value" id="dtc">—</div><div class="hint" id="tdcHint">冷凝器 TD = T_cond − T_c,in</div></div>
+<div class="metric"><div class="name">蒸發器進出口溫差 ΔTe</div><div class="value" id="dte">—</div><div class="hint" id="tdeHint">蒸發器 TD = T_e,in − T_evap</div></div>
+<div class="metric"><div class="name">壓縮比 (P_high / P_low)</div><div class="value" id="ratio">—</div><div class="hint" id="disHint">排氣溫度參考值：—</div></div>
+</div>
+<div class="status" id="status">等待計算</div>
+<div class="diagnosis"><strong id="diagTitle">系統診斷</strong><p id="diagText">請輸入工況後重新計算。</p><p id="advice"></p></div>
+</section>
+<section class="card">
+<h2>冷凍循環四大元件與風側簡圖</h2><p class="small">冷媒狀態及冷凝器／蒸發器進出口溫度</p>
+<div class="chartwrap"><svg id="cycle" viewBox="0 0 760 440" role="img" aria-label="冷凍循環四大元件示意圖"></svg></div>
+<div class="legend"><span><i class="dot" style="background:#f87171"></i>高溫高壓過熱氣態</span><span><i class="dot" style="background:#f59e0b"></i>中溫高壓過冷液態</span><span><i class="dot" style="background:#3b82f6"></i>低溫低壓液氣混合</span><span><i class="dot" style="background:#06b6d4"></i>低溫低壓過熱吸氣</span></div>
+</section>
+<section class="card">
+<h2>莫里爾線圖 (Log P–h 壓力–焓值圖)</h2><p class="small">1：吸氣 → 2：排氣 → 3：膨脹閥入口 → 4：蒸發器入口</p>
+<div class="chartwrap"><svg id="ph" viewBox="0 0 760 540" role="img" aria-label="概念性壓力焓值圖"></svg></div>
+<div class="legend"><span><i class="dot" style="background:#94a3b8"></i>飽和液／氣曲線（概念示意）</span><span><i class="dot" style="background:#10b981"></i>實際循環 (1–2–3–4)</span><span><i class="dot" style="background:#f87171"></i>冷凝器進／出風對照</span><span><i class="dot" style="background:#38bdf8"></i>蒸發器進／出風對照</span></div>
+<p class="note">注意：本圖依輸入值繪製概念性 P–h 循環示意，不是冷媒物性資料庫產生的精確莫里爾圖。正式工程計算請以冷媒飽和表、過熱表或經驗證的物性函式庫為準。</p>
+</section>
+<div class="footer">單一 HTML 離線工具 · 工況判斷為教學用途 · 請勿取代原廠檢修規範</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const base={tev:5,tsuc:11,tcond:45,tliq:40,tdis:78,tcin:33,tcout:41,tein:26,teout:15};
+const refData={
+'R-410A (HFC 變頻空調主力)':{app:'家用／商用空調',tc:71.3,pc:4.90,a:0.045,b:0.035},
+'R-134a':{app:'中溫冷凍／車用空調',tc:101.1,pc:4.06,a:0.028,b:0.026},
+'R-22':{app:'傳統空調／冷凍',tc:96.1,pc:4.99,a:0.035,b:0.032},
+'R-32':{app:'新世代空調',tc:78.1,pc:5.78,a:0.05,b:0.045},
+'R-407C':{app:'空調替代冷媒',tc:86.7,pc:4.63,a:0.036,b:0.032},
+'R-404A':{app:'低溫商用冷凍',tc:72.1,pc:3.73,a:0.035,b:0.031},
+'R-507A':{app:'低溫商用冷凍',tc:70.9,pc:3.70,a:0.035,b:0.031},
+'R-290 (丙烷)':{app:'小型冷凍／熱泵',tc:96.7,pc:4.25,a:0.027,b:0.026},
+'R-600a (異丁烷)':{app:'家用冰箱',tc:134.7,pc:3.63,a:0.018,b:0.019},
+'R-1234yf':{app:'車用空調',tc:94.7,pc:3.38,a:0.025,b:0.025},
+'R-1234ze(E)':{app:'中溫空調／熱泵',tc:109.4,pc:3.64,a:0.024,b:0.023},
+'R-717 (氨)':{app:'工業冷凍',tc:132.4,pc:11.33,a:0.08,b:0.06},
+'R-744 (二氧化碳)':{app:'跨臨界熱泵／冷凍',tc:31.0,pc:7.38,a:0.1,b:0.07},
+'R-12':{app:'舊式冷凍設備',tc:112.0,pc:4.14,a:0.025,b:0.024},
+'R-23':{app:'超低溫冷凍',tc:25.9,pc:4.83,a:0.08,b:0.07},
+'R-152a':{app:'特定空調／冷凍用途',tc:113.3,pc:4.52,a:0.023,b:0.023},
+'R-407A':{app:'商用冷凍',tc:82.7,pc:4.62,a:0.036,b:0.032},
+'R-407F':{app:'商用冷凍',tc:82.7,pc:4.75,a:0.036,b:0.032},
+'R-448A':{app:'低溫／中溫冷凍',tc:83.7,pc:4.47,a:0.035,b:0.031},
+'R-449A':{app:'低溫／中溫冷凍',tc:81.5,pc:4.45,a:0.035,b:0.031}
+};
+function read(){let o={};Object.keys(base).forEach(k=>o[k]=Number($(k).value));return o}
+function satP(t,r){ // 教學用簡化近似：不可作為壓力表替代
+ const tk=t+273.15, tc=r.tc+273.15;
+ if(r.tc===31 && t>=31) return r.pc;
+ const tr=Math.max(.35,Math.min(.999,tk/tc));
+ let p=r.pc*Math.exp((r.a*1000/8.314)*(1-tr)+r.b*1000/8.314*Math.log(tr));
+ return Math.max(.015,Math.min(r.pc*0.98,p));
+}
+function fmt(n,d=1){return Number.isFinite(n)?n.toFixed(d):'—'}
+function put(id,val,cls){$(id).textContent=val;$(id).className='value '+(cls||'')}
+function diagnose(v){
+ const r=refData[$('ref').value],sh=v.tsuc-v.tev,sc=v.tcond-v.tliq,dtc=v.tcout-v.tcin,dte=v.tein-v.teout;
+ const tdC=v.tcond-v.tcin,tdE=v.tein-v.tev;
+ const pl=satP(v.tev,r),ph=satP(v.tcond,r),ratio=ph/pl;
+ const cop=(v.tev+273.15)/(v.tcond-v.tev);
+ const issues=[];
+ if(sh<2)issues.push('吸氣過熱度偏低，需確認回液風險與感溫位置');else if(sh>15)issues.push('吸氣過熱度偏高，可能有冷媒不足或蒸發器供液不足');
+ if(sc<1)issues.push('過冷度偏低，可能供液不足或冷媒量不足');else if(sc>12)issues.push('過冷度偏高，請檢查冷媒充填量及冷凝器狀況');
+ if(dtc<3)issues.push('冷凝器風側溫升偏小，請確認風量、負載與量測位置');else if(dtc>15)issues.push('冷凝器溫升偏大，可能風量不足、髒堵或水流不足');
+ if(dte<4)issues.push('蒸發器風側溫降偏小，請確認負載與風量');else if(dte>18)issues.push('蒸發器溫降偏大，可能風量不足、濾網髒堵或結霜');
+ if(v.tdis>110)issues.push('排氣溫度偏高，檢查過熱度、冷凝壓力及壓縮機冷卻');
+ if(v.tcond>=r.tc)issues.push('冷凝溫度達到／超過該冷媒臨界溫度，傳統冷凝飽和模型不適用');
+ const normal=issues.length===0;
+ $('copline').textContent='理論 Carnot COP 參考值：'+fmt(cop,2)+'（非實際壓縮循環 COP）';
+ put('plow',fmt(pl,2)+' MPa');$('plow2').textContent=fmt(pl*10.197,2)+' kgf/cm²G（估算；表壓換算未精確校正）';
+ put('phigh',fmt(ph,2)+' MPa');$('phigh2').textContent=fmt(ph*10.197,2)+' kgf/cm²G（估算）';
+ put('sh',fmt(sh,1)+' °C',sh>=4&&sh<=10?'good':'warn');put('sc',fmt(sc,1)+' °C',sc>=3&&sc<=8?'good':'warn');
+ put('dtc',fmt(dtc,1)+' °C',dtc>=3&&dtc<=12?'good':'warn');$('tdcHint').textContent='冷凝 TD (T_cond−進風)：'+fmt(tdC,1)+' °C';
+ put('dte',fmt(dte,1)+' °C',dte>=6&&dte<=14?'good':'warn');$('tdeHint').textContent='蒸發 TD (回風−T_evap)：'+fmt(tdE,1)+' °C';
+ put('ratio',fmt(ratio,2),ratio<8?'good':'warn');$('disHint').textContent='輸入排氣溫度：'+fmt(v.tdis,1)+' °C';
+ $('status').textContent=normal?'✅ 系統診斷結果：輸入指標未發現明顯異常':'⚠️ 系統診斷結果：發現 '+issues.length+' 項需檢查指標';
+ $('status').style.color=normal?'#34d399':'#fbbf24';$('status').style.borderColor=normal?'#10b981':'#f59e0b';$('status').style.background=normal?'#123c3c':'#422b16';
+ $('diagTitle').textContent=normal?'冷媒側與風側熱力循環指標大致正常':'建議優先檢查以下項目';
+ $('diagText').innerHTML=normal?'目前輸入的過熱度、過冷度與風側溫差落在此工具設定的參考區間。':'• '+issues.join('<br>• ');
+ $('advice').textContent=normal?'🔧 檢修建議：持續監測運轉穩定度，並定期清潔濾網及換熱器。':'🔧 請先確認儀表校正、量測位置、風量／水量及實際高低壓，再依原廠程序檢修。';
+ $('refInfo').textContent='應用領域：'+r.app+'　|　臨界溫度：約 '+r.tc+' °C　|　臨界壓力：約 '+r.pc+' MPa';
+ drawCycle(v,sh,sc,dtc,dte);drawPH(v,pl,ph);
+}
+function svgText(x,y,text,size=15,color='#cbd5e1',anchor='middle',weight=500){return `<text x="${x}" y="${y}" fill="${color}" font-size="${size}" text-anchor="${anchor}" font-weight="${weight}" font-family="Arial,'Noto Sans TC',sans-serif">${text}</text>`}
+function drawCycle(v,sh,sc,dtc,dte){
+ const s=$('cycle');s.innerHTML=`<defs><marker id="arrR" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#f87171"/></marker><marker id="arrO" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#f59e0b"/></marker><marker id="arrB" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#3b82f6"/></marker><marker id="arrC" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#06b6d4"/></marker></defs>
+ <rect x="12" y="12" width="736" height="416" rx="16" fill="#0b1222"/>
+ <path d="M590 155 H170" stroke="#f59e0b" stroke-width="5" stroke-dasharray="9 5" marker-end="url(#arrO)" fill="none"/><path d="M170 155 V315" stroke="#3b82f6" stroke-width="5" stroke-dasharray="9 5" marker-end="url(#arrB)" fill="none"/><path d="M170 315 H590" stroke="#06b6d4" stroke-width="5" stroke-dasharray="9 5" marker-end="url(#arrC)" fill="none"/><path d="M590 315 V155" stroke="#f87171" stroke-width="5" stroke-dasharray="9 5" marker-end="url(#arrR)" fill="none"/>
+ <rect x="280" y="111" width="200" height="86" rx="13" fill="#1e293b" stroke="#334155" stroke-width="3"/><text x="380" y="138" fill="#e2e8f0" text-anchor="middle" font-size="17" font-weight="700">冷凝器 (Condenser)</text>${svgText(380,161,'冷媒：'+fmt(v.tcond,1)+'°C | 高壓側',13,'#fca5a5')}${svgText(380,181,'進風 '+fmt(v.tcin,1)+'°C → 出風 '+fmt(v.tcout,1)+'°C',13,'#fbbf24')}
+ <rect x="280" y="274" width="200" height="86" rx="13" fill="#1e293b" stroke="#334155" stroke-width="3"/><text x="380" y="301" fill="#e2e8f0" text-anchor="middle" font-size="17" font-weight="700">蒸發器 (Evaporator)</text>${svgText(380,324,'蒸發：'+fmt(v.tev,1)+'°C | 低壓側',13,'#7dd3fc')}${svgText(380,344,'回風 '+fmt(v.tein,1)+'°C → 送風 '+fmt(v.teout,1)+'°C',13,'#22d3ee')}
+ <rect x="125" y="222" width="90" height="64" rx="11" fill="#1e293b" stroke="#334155" stroke-width="3"/><text x="170" y="249" fill="#e2e8f0" text-anchor="middle" font-size="15" font-weight="700">膨脹閥</text><text x="170" y="269" fill="#94a3b8" text-anchor="middle" font-size="12">EEV / TXV</text>
+ <circle cx="590" cy="235" r="48" fill="#1e293b" stroke="#334155" stroke-width="3"/><text x="590" y="232" fill="#e2e8f0" text-anchor="middle" font-size="16" font-weight="700">壓縮機</text><text x="590" y="252" fill="#94a3b8" text-anchor="middle" font-size="12">Compressor</text>
+ ${svgText(380,65,'③ 膨脹閥入口：'+fmt(v.tliq,1)+' °C　過冷度 SC = '+fmt(sc,1)+' °C',14,'#fbbf24')}
+ ${svgText(590,93,'② 排氣溫度：'+fmt(v.tdis,1)+' °C',14,'#fca5a5')}
+ ${svgText(590,389,'① 吸氣溫度：'+fmt(v.tsuc,1)+' °C　SH = '+fmt(sh,1)+' °C',14,'#67e8f9')}
+ ${svgText(170,389,'④ 蒸發器入口：約 '+fmt(v.tev,1)+' °C',14,'#93c5fd')}`;
+}
+function drawPH(v,pl,ph){
+ const s=$('ph'),x0=110,y0=455,w=560,h=365;
+ const X=h=>x0+(h-180)/300*w, Y=p=>y0-Math.log10(Math.max(.12,p)/.12)/Math.log10(5/.12)*h;
+ const pL=Math.max(.15,pl),pH=Math.max(pL*1.4,ph);
+ const h1=420,h2=455,h3=270,h4=270;
+ const yL=Y(pL),yH=Y(pH);
+ let grid='';
+ for(let i=0;i<=5;i++){let x=x0+i*w/5;grid+=`<line x1="${x}" y1="55" x2="${x}" y2="${y0}" stroke="#233047"/>${svgText(x,y0+28,String(180+i*60),13,'#64748b')}`}
+ [.2,.5,1,2,4].forEach(p=>{let y=Y(p);grid+=`<line x1="${x0}" y1="${y}" x2="${x0+w}" y2="${y}" stroke="#233047"/>${svgText(x0-12,y+5,p.toFixed(2),13,'#64748b','end')}`});
+ const dome=`M ${X(180)} ${Y(.16)} C ${X(205)} ${Y(.45)}, ${X(245)} ${Y(2.4)}, ${X(300)} ${Y(4.5)} C ${X(335)} ${Y(5.1)}, ${X(390)} ${Y(4.4)}, ${X(415)} ${Y(2.2)} C ${X(430)} ${Y(1.1)}, ${X(425)} ${Y(.5)}, ${X(420)} ${Y(.16)}`;
+ const pts=[[X(h1),yL],[X(h2),yH],[X(h3),yH],[X(h4),yL]];
+ s.innerHTML=`<rect x="8" y="8" width="744" height="524" rx="14" fill="#0b1222"/>${grid}<path d="${dome}" fill="#1e293b66" stroke="#64748b" stroke-width="4"/>
+ <path d="M${pts[0][0]} ${pts[0][1]} L${pts[1][0]} ${pts[1][1]} L${pts[2][0]} ${pts[2][1]} L${pts[3][0]} ${pts[3][1]} Z" fill="#10b98118" stroke="#10b981" stroke-width="4"/>
+ <path d="M${pts[0][0]} ${pts[0][1]} L${pts[1][0]} ${pts[1][1]}" stroke="#f87171" stroke-width="5"/><path d="M${pts[1][0]} ${pts[1][1]} L${pts[2][0]} ${pts[2][1]}" stroke="#f59e0b" stroke-width="5"/><path d="M${pts[2][0]} ${pts[2][1]} L${pts[3][0]} ${pts[3][1]}" stroke="#3b82f6" stroke-width="5"/><path d="M${pts[3][0]} ${pts[3][1]} L${pts[0][0]} ${pts[0][1]}" stroke="#06b6d4" stroke-width="5"/>
+ ${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="${['#06b6d4','#f87171','#f59e0b','#3b82f6'][i]}"/>`).join('')}
+ ${svgText(pts[0][0]+18,pts[0][1]+24,'1 吸氣',15,'#e2e8f0','start',700)}${svgText(pts[1][0]+18,pts[1][1]-12,'2 排氣',15,'#e2e8f0','start',700)}${svgText(pts[2][0]-18,pts[2][1]-12,'3 膨脹閥入口',15,'#e2e8f0','end',700)}${svgText(pts[3][0]-18,pts[3][1]+24,'4 蒸發器入口',15,'#e2e8f0','end',700)}
+ ${svgText(x0+w/2,520,'比焓 Enthalpy h (kJ/kg)',16,'#94a3b8') }<text x="27" y="270" fill="#94a3b8" font-size="15" text-anchor="middle" transform="rotate(-90 27 270)">Log P (MPa abs)</text>
+ ${svgText(390,40,'臨界點（示意）',14,'#94a3b8')}`;
+}
+function setVals(o){Object.keys(o).forEach(k=>$(k).value=o[k]);diagnose(read())}
+const presets={
+normal:{...base},
+low:{...base,tsuc:22,tliq:43,tdis:105,tev:2,tcond:48,tcin:33,tcout:43},
+over:{...base,tsuc:8,tliq:34,tdis:83,tev:5,tcond:48,tcin:33,tcout:43},
+condenser:{...base,tcond:55,tliq:48,tdis:105,tcin:33,tcout:46},
+valve:{...base,tev:-2,tsuc:7,tcond:45,tliq:42,tdis:95,tein:26,teout:19},
+evap:{...base,tein:26,teout:20,tev:2,tsuc:8,tcond:45,tliq:40,tdis:85}
+};
+document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-preset]').forEach(x=>x.classList.remove('active'));b.classList.add('active');setVals(presets[b.dataset.preset])}));
+$('calculate').addEventListener('click',()=>diagnose(read()));
+$('reset').addEventListener('click',()=>{document.querySelectorAll('[data-preset]').forEach(x=>x.classList.toggle('active',x.dataset.preset==='normal'));setVals(base)});
+$('ref').addEventListener('change',()=>diagnose(read()));
+document.querySelectorAll('input').forEach(i=>i.addEventListener('change',()=>diagnose(read())));
+diagnose(read());
+</script>
+</body>
+</html>
